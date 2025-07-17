@@ -383,7 +383,7 @@ async def chatbot(msg):
             {"role": "user", "content": msg},
         ],
         "model": "llama-3.3-70b-versatile",
-        "temperature": 0.7,
+        "temperature": 1.0,
     }
 
     async with httpx.AsyncClient() as client:
