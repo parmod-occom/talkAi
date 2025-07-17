@@ -189,7 +189,14 @@ async def speak(audio: UploadFile):
     except Exception as e:
         print("Error parsing JSON:", e)
         return JSONResponse({"error": "Invalid JSON or request format"}, status_code=400)
-    
+
+@app.post("/talk-to-ai")
+async def talkToAi(request: Request):
+    data = await request.json()
+    text = data["question"]
+    reply = await chatbot(text)
+    return JSONResponse({"response" : reply})
+
 def generate_tts_with_visemes(text):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"
     headers = {

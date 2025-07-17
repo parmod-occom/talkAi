@@ -3,6 +3,7 @@ import './App.css';
 import React, { useState } from 'react';
 import axios from 'axios';
 import TalkingAvatar  from './TalkingAvatar.tsx';
+import TalkToAI  from './TalkToAI.tsx';
 
 function App() {
   const [audioURL, setAudioURL] = useState(null);
@@ -90,6 +91,7 @@ function App() {
           <button onClick={speak}>Speak</button>
         </div>
         */}
+        <TalkToAI />
     </>
   );
 }
