@@ -1,0 +1,7 @@
+
+avatar-ai/node_modules
+backend/temp/*
+backend/.env
+avatar-ai/.env
+*.mp3
+*.wav
