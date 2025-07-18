@@ -195,7 +195,7 @@ async def talkToAi(request: Request):
     data = await request.json()
     text = data["question"]
     reply = await chatbot(text)
-    return JSONResponse({"response" : reply})
+    return JSONResponse({"response" : reply,"visemes": generate_visemes(reply)})
 
 def generate_tts_with_visemes(text):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"

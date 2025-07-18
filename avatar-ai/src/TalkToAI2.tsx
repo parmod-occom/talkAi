@@ -1,17 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
+import TestAvatar from './TestAvatar.tsx';
 
 const TalkToAI2: React.FC = () => {
   const [question, setQuestion] = useState('');
   const [response, setResponse] = useState('');
+  const [visemes, setVisemes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [speechStartTime, setSpeechStartTime] = useState<number | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const transcriptRef = useRef<string>(''); // stores spoken text immediately
+  const transcriptRef = useRef<string>('');
 
-  // Initialize SpeechRecognition on mount
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       alert('Your browser does not support Speech Recognition.');
@@ -20,7 +21,7 @@ const TalkToAI2: React.FC = () => {
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
-    recognition.lang = 'en-US'; // Change to 'hi-IN' for Hindi
+    recognition.lang = 'en-US';
     recognition.interimResults = false;
 
     recognition.onstart = () => {
@@ -31,7 +32,7 @@ const TalkToAI2: React.FC = () => {
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const spokenText = event.results[0][0].transcript;
       transcriptRef.current = spokenText;
-      setQuestion(spokenText); // For UI
+      setQuestion(spokenText);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -43,52 +44,58 @@ const TalkToAI2: React.FC = () => {
       setListening(false);
       const finalText = transcriptRef.current.trim();
       if (finalText) {
-        askAI(finalText); // ✅ Call API after user stops speaking
+        askAI(finalText);
       }
     };
 
     recognitionRef.current = recognition;
   }, []);
 
-  // Start speech recognition
   const handleVoiceInput = () => {
     if (recognitionRef.current && !listening) {
       recognitionRef.current.start();
     }
   };
 
-  // Speak the AI response using text-to-speech
-  const speakText = (text: string) => {
+  const speakText = (text: string, onStart: () => void, onEnd: () => void) => {
     if (!window.speechSynthesis) {
       alert('Speech synthesis not supported.');
       return;
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US'; // Change to 'hi-IN' for Hindi
+    utterance.lang = 'en-US';
     utterance.rate = 0.9;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
-    window.speechSynthesis.cancel(); // Stop any ongoing speech
+    utterance.onstart = () => {
+      const start = performance.now();
+      setSpeechStartTime(start);
+      onStart();
+    };
+
+    utterance.onend = () => {
+      setSpeechStartTime(null);
+      onEnd();
+    };
+
+    window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   };
 
-  // Send question to backend and handle AI response
   const askAI = async (inputText?: string) => {
     const textToSend = inputText ?? question;
-
     if (!textToSend.trim()) return;
 
     setLoading(true);
     setResponse('');
+    setVisemes([]);
 
     try {
       const res = await fetch('http://localhost:8000/talk-to-ai', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: textToSend }),
       });
 
@@ -96,7 +103,13 @@ const TalkToAI2: React.FC = () => {
 
       if (data?.response) {
         setResponse(data.response);
-        speakText(data.response);
+        setVisemes(data.visemes);
+
+        speakText(data.response, () => {
+          console.log('Speech started');
+        }, () => {
+          console.log('Speech ended');
+        });
       } else {
         setResponse('No response from AI.');
       }
@@ -153,16 +166,8 @@ const TalkToAI2: React.FC = () => {
         </button>
       </div>
 
-      <div
-        style={{
-          marginTop: 20,
-          padding: 15,
-          border: '1px solid #ccc',
-          borderRadius: 5,
-          backgroundColor: '#f9f9f9',
-          minHeight: 100,
-        }}
-      >
+      <div style={{ marginTop: 20, padding: 15, border: '1px solid #ccc', borderRadius: 5, backgroundColor: '#f9f9f9' }}>
+        <TestAvatar visemes={visemes} text={response} speechStartTime={speechStartTime} />
         <strong>AI Response:</strong>
         <p>{response || 'No response yet.'}</p>
       </div>

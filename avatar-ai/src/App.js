@@ -3,7 +3,7 @@ import './App.css';
 import React, { useState } from 'react';
 import axios from 'axios';
 import TalkingAvatar  from './TalkingAvatar.tsx';
-import TalkToAI  from './TalkToAI.tsx';
+import TalkToAI2  from './TalkToAI2.tsx';
 
 function App() {
   const [audioURL, setAudioURL] = useState(null);
@@ -69,16 +69,18 @@ function App() {
 
   return (
     <>
-      <div style={{ marginTop: 50 }}>
+      {/* <div style={{ marginTop: 50 }}> */}
         {/* <Avatar speaking={!!audioURL} /> */}
-        <TalkingAvatar audioPath={audioURL || audioPath} visemes={visemes} />
+        {/* <TalkingAvatar audioPath={audioURL || audioPath} visemes={visemes} />
         <br />
         <button onClick={recording ? stopRecording : startRecording}>
           🎤 {recording ? 'Stop' : 'Talk to Avatar'}
         </button>
         <p><strong>AI:</strong> {reply}</p>
         {audioURL && <audio src={audioURL} controls autoPlay />}
-      </div>
+      </div> */}
+
+
         {/** 
         <div id="controls" style={{ marginTop: 50 }}>
           <textarea
@@ -91,7 +93,7 @@ function App() {
           <button onClick={speak}>Speak</button>
         </div>
         */}
-        <TalkToAI />
+        <TalkToAI2 />
     </>
   );
 }
