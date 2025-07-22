@@ -11,7 +11,7 @@ import base64
 from pydantic import BaseModel
 import httpx
 import os
-
+from g2p_en import G2p
 # Load environment variables
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
@@ -24,6 +24,7 @@ asr_model = whisper.load_model("small")
 
 # FastAPI app
 app = FastAPI()
+g2p = G2p()
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +33,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class TTSRequest(BaseModel):
+    text: str
+
+phoneme_to_viseme = {
+    'AA': 'O', 'AE': 'AA', 'AH': 'EH', 'AO': 'O', 'AW': 'O', 'AY': 'AI',
+    'B': 'BMP', 'CH': 'SH', 'D': 'D', 'DH': 'TH', 'EH': 'EH',
+    'ER': 'ER', 'EY': 'AI', 'F': 'F', 'G': 'G', 'HH': 'H',
+    'IH': 'IH', 'IY': 'IY', 'JH': 'SH', 'K': 'K', 'L': 'L',
+    'M': 'BMP', 'N': 'N', 'NG': 'N', 'OW': 'O', 'OY': 'O',
+    'P': 'BMP', 'R': 'R', 'S': 'SH', 'SH': 'SH', 'T': 'T',
+    'TH': 'TH', 'UH': 'U', 'UW': 'U', 'V': 'F', 'W': 'U',
+    'Y': 'IY', 'Z': 'SH', 'ZH': 'SH'
+}
 
 # Helper: Convert MP3 to WAV
 def convert_mp3_to_wav(mp3_path):
@@ -196,6 +211,44 @@ async def talkToAi(request: Request):
     text = data["question"]
     reply = await chatbot(text)
     return JSONResponse({"response" : reply,"visemes": generate_visemes(reply)})
+
+@app.post("/tts")
+def tts(request: TTSRequest):
+    headers = {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "text": request.text,
+        "with_timestamps": True
+    }
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/with-timestamps"
+    response = requests.post(url, headers=headers, json=payload)
+    data = response.json()
+
+    # Step 1: Get audio and alignment
+    audio_base64 = data['audio_base64']
+    alignment = data['normalized_alignment']
+    characters = alignment['characters']
+    starts = alignment['character_start_times_seconds']
+
+    # Step 2: Convert text to phonemes
+    text = ''.join(characters).strip()
+    phonemes = [p for p in g2p(text) if p not in [' ', '‖']]
+
+    # Step 3: Map to visemes
+    visemes = []
+    for i, phoneme in enumerate(phonemes):
+        viseme = phoneme_to_viseme.get(phoneme, 'default')
+        start = round(starts[i], 3) if i < len(starts) else 0
+        visemes.append({'viseme': viseme, 'start': start})
+
+    return {
+        'audio_base64': audio_base64,
+        'visemes': visemes
+    }
 
 def generate_tts_with_visemes(text):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"

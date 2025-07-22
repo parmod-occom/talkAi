@@ -44,7 +44,7 @@ const TalkToAI2: React.FC = () => {
       setListening(false);
       const finalText = transcriptRef.current.trim();
       if (finalText) {
-        askAI(finalText);
+        askAI2(finalText);
       }
     };
 
@@ -121,6 +121,43 @@ const TalkToAI2: React.FC = () => {
     }
   };
 
+  const askAI2 = async (inputText?: string) => {
+    const textToSend = inputText ?? question;
+    if (!textToSend.trim()) return;
+
+    setLoading(true);
+    setResponse('');
+    setVisemes([]);
+
+    try {
+      const res = await fetch('http://localhost:8000/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: textToSend }),
+      });
+
+      const data = await res.json();
+
+      if (data?.response) {
+        setResponse(data.response);
+        setVisemes(data.visemes);
+
+        speakText(data.response, () => {
+          console.log('Speech started');
+        }, () => {
+          console.log('Speech ended');
+        });
+      } else {
+        setResponse('No response from AI.');
+      }
+    } catch (err) {
+      console.error(err);
+      setResponse('Error contacting AI.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ padding: 20, maxWidth: 600, margin: 'auto', fontFamily: 'Arial' }}>
       <h2>🎤 Ask AI with Your Voice</h2>
@@ -151,7 +188,7 @@ const TalkToAI2: React.FC = () => {
         </button>
 
         <button
-          onClick={() => askAI()}
+          onClick={() => askAI2()}
           disabled={loading}
           style={{
             padding: '10px 20px',
